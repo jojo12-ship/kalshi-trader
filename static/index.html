@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kalshi Trader</title>
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #16181d;
+    --surface2: #1e2028;
+    --border: #2a2d38;
+    --text: #e8eaf0;
+    --muted: #7b8099;
+    --green: #22c55e;
+    --green-dim: #16a34a22;
+    --red: #ef4444;
+    --red-dim: #dc262622;
+    --yellow: #f59e0b;
+    --blue: #3b82f6;
+    --purple: #8b5cf6;
+    --cyan: #06b6d4;
+    --cyan-dim: #06b6d420;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── Header ─────────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.4; }
+  }
+  .logo h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo span { color: var(--muted); font-size: 12px; margin-left: 4px; }
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  .last-updated { color: var(--muted); font-size: 12px; }
+
+  /* ── Toggle Switch ───────────────────────────────────── */
+  .toggle-wrap {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 40px;
+    padding: 6px 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle-wrap:hover { border-color: var(--blue); }
+  .toggle-wrap.crypto-wrap:hover { border-color: var(--cyan); }
+  .toggle-label { font-size: 13px; font-weight: 500; }
+  .toggle-label.on  { color: var(--green); }
+  .toggle-label.off { color: var(--muted); }
+  .toggle-label.crypto-on  { color: var(--cyan); }
+  .toggle {
+    position: relative; width: 44px; height: 24px;
+    border-radius: 12px; background: var(--border);
+    transition: background 0.25s;
+    cursor: pointer;
+  }
+  .toggle.on        { background: var(--green); }
+  .toggle.crypto-on { background: var(--cyan); }
+  .toggle::after {
+    content: '';
+    position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    border-radius: 50%; background: #fff;
+    transition: transform 0.25s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
+  .toggle.on::after, .toggle.crypto-on::after { transform: translateX(20px); }
+
+  /* ── Layout ─────────────────────────────────────────── */
+  main { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 900px) {
+    .grid-4, .grid-3 { grid-template-columns: 1fr 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* ── Cards ───────────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card.crypto-card { border-color: #06b6d430; background: linear-gradient(135deg, #16181d 80%, #06b6d408); }
+  .card-title {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--muted); margin-bottom: 10px;
+  }
+  .card-value { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .card-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .positive { color: var(--green); }
+  .negative { color: var(--red); }
+  .neutral  { color: var(--text); }
+  .cyan     { color: var(--cyan); }
+
+  /* ── Status Badge ────────────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+  }
+  .badge-green  { background: var(--green-dim); color: var(--green); }
+  .badge-red    { background: var(--red-dim);   color: var(--red); }
+  .badge-yellow { background: #f59e0b22; color: var(--yellow); }
+  .badge-cyan   { background: var(--cyan-dim);  color: var(--cyan); }
+  .badge-purple { background: #8b5cf620;        color: var(--purple); }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* ── Progress bar ────────────────────────────────────── */
+  .progress-wrap { margin-top: 12px; }
+  .progress-labels {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--muted); margin-bottom: 6px;
+  }
+  .progress-track {
+    height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--purple));
+    transition: width 0.5s ease;
+  }
+  .signal-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+  .signal-fill.bull { background: var(--green); }
+  .signal-fill.bear { background: var(--red); }
+  .signal-fill.neut { background: var(--muted); }
+
+  /* ── Section heading ─────────────────────────────────── */
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-head h2 { font-size: 14px; font-weight: 600; }
+  .refresh-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: var(--radius-sm); padding: 4px 10px; font-size: 11px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .refresh-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* ── Table ───────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--muted); padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .ticker { font-family: monospace; font-size: 11px; color: var(--muted); }
+  .empty { text-align: center; color: var(--muted); padding: 28px; font-size: 13px; }
+
+  /* ── Config Panel ────────────────────────────────────── */
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .config-grid { grid-template-columns: 1fr; } }
+  .field label {
+    display: block; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .field input {
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); padding: 9px 12px; font-size: 13px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: var(--blue); }
+  .btn {
+    padding: 10px 20px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: none; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-danger  { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+  .btn-danger:hover { background: var(--red); color: #fff; }
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+  /* ── Activity log ────────────────────────────────────── */
+  .log {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px;
+    font-family: monospace; font-size: 12px; color: var(--muted);
+    max-height: 180px; overflow-y: auto; line-height: 1.7;
+  }
+  .log .ts { color: var(--border); margin-right: 8px; }
+  .log .evt-trade { color: var(--green); }
+  .log .evt-scan  { color: var(--blue); }
+  .log .evt-stop  { color: var(--red); }
+  .log .evt-crypto { color: var(--cyan); }
+
+  /* ── Crypto Intel ────────────────────────────────────── */
+  .crypto-panel { display: none; flex-direction: column; gap: 16px; }
+  .crypto-panel.visible { display: flex; }
+  .crypto-intel { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .crypto-intel { grid-template-columns: 1fr; } }
+
+  .price-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .price-big { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+  .price-change {
+    font-size: 12px; font-weight: 600; padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .price-change.up   { background: var(--green-dim); color: var(--green); }
+  .price-change.down { background: var(--red-dim);   color: var(--red); }
+  .price-change.flat { background: var(--border);    color: var(--muted); }
+
+  .candle-wrap {
+    margin-top: 12px; overflow: hidden;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); padding: 10px 8px 6px;
+  }
+  .candle-label { font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+  .candle-wrap svg { display: block; width: 100%; }
+
+  .news-list { margin-top: 10px; }
+  .news-item {
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px; line-height: 1.5; color: var(--text);
+  }
+  .news-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .news-item .news-badge {
+    display: inline-block; margin-right: 6px;
+    font-size: 10px; font-weight: 700;
+    padding: 1px 6px; border-radius: 4px;
+    vertical-align: middle;
+  }
+
+  .eth-sub { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .eth-label { font-size: 11px; color: var(--muted); }
+  .eth-price { font-size: 16px; font-weight: 600; }
+
+  .confidence-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 12px; font-size: 11px; color: var(--muted);
+  }
+
+  /* ── Spinner ─────────────────────────────────────────── */
+  .spin {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--border); border-top-color: var(--blue);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot" id="liveDot"></div>
+    <h1>Kalshi Trader <span>autopilot</span></h1>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">Loading…</span>
+    <!-- Crypto mode toggle -->
+    <div class="toggle-wrap crypto-wrap" id="cryptoToggle" onclick="toggleCrypto()">
+      <span style="font-size:13px;">₿</span>
+      <span class="toggle-label off" id="cryptoLabel">CRYPTO</span>
+      <div class="toggle" id="cryptoEl"></div>
+    </div>
+    <!-- Autopilot toggle -->
+    <div class="toggle-wrap" id="pilotToggle" onclick="toggleAutopilot()">
+      <span class="toggle-label off" id="toggleLabel">OFF</span>
+      <div class="toggle" id="toggleEl"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Stat cards -->
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">Balance</div>
+      <div class="card-value" id="balance">—</div>
+      <div class="card-sub">Available cash</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Today's P&amp;L</div>
+      <div class="card-value" id="todayPnl">—</div>
+      <div class="card-sub" id="todayTrades">0 trades today</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Deployed Today</div>
+      <div class="card-value" id="deployed">—</div>
+      <div class="progress-wrap">
+        <div class="progress-labels">
+          <span>used</span><span id="budgetLabel">of $50</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="budgetBar" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Autopilot Status</div>
+      <div style="margin-top:4px" id="statusBadge"><span class="badge badge-red"><span class="badge-dot"></span>Offline</span></div>
+      <div class="card-sub" style="margin-top:10px" id="nextScan">Next scan: —</div>
+    </div>
+  </div>
+
+  <!-- Crypto Intel Panel (shown when crypto mode is ON) -->
+  <div class="crypto-panel" id="cryptoPanel">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:-4px">
+      <span style="font-size:13px;font-weight:600;color:var(--cyan)">₿ Crypto Intelligence</span>
+      <span class="badge badge-cyan" id="cryptoTrendBadge"><span class="badge-dot"></span>neutral</span>
+      <span style="font-size:11px;color:var(--muted)" id="cryptoUpdated"></span>
+    </div>
+    <div class="crypto-intel">
+
+      <!-- Left: prices + candle chart -->
+      <div class="card crypto-card">
+        <div class="card-title">BTC / ETH Live</div>
+        <div class="price-row">
+          <span class="price-big" id="btcPrice">—</span>
+          <span class="price-change flat" id="btcChange5m">5m: —</span>
+          <span class="price-change flat" id="btcChange1h">1h: —</span>
+        </div>
+        <div class="eth-sub">
+          <span class="eth-label">ETH</span>
+          <span class="eth-price" id="ethPrice">—</span>
+        </div>
+        <div class="candle-wrap">
+          <div class="candle-label">BTC/USDT — 5-minute candles (1 hour)</div>
+          <svg id="candleChart" viewBox="0 0 280 70" height="70" preserveAspectRatio="none">
+            <text x="50%" y="50%" text-anchor="middle" fill="#7b8099" font-size="11">Loading…</text>
+          </svg>
+        </div>
+        <div class="confidence-row">
+          <span>Signal confidence</span>
+          <span id="confPct" style="font-weight:600">—</span>
+        </div>
+        <div class="progress-track" style="margin-top:6px">
+          <div class="signal-fill neut" id="confBar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Right: news sentiment -->
+      <div class="card crypto-card">
+        <div class="card-title">Crypto News Sentiment</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="font-size:12px;color:var(--muted)">Sentiment score</span>
+          <span id="newsSentScore" style="font-size:18px;font-weight:700">—</span>
+        </div>
+        <div class="progress-track" style="margin-bottom:14px">
+          <div class="signal-fill neut" id="sentBar" style="width:50%;margin-left:0"></div>
+        </div>
+        <div class="news-list" id="newsList">
+          <div class="news-item" style="color:var(--muted)">Fetching headlines…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Positions + Trades -->
+  <div class="grid-2">
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Open Positions</h2>
+        <button class="refresh-btn" onclick="loadAll()">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Ticker</th><th>Side</th><th>Qty</th><th>Entry</th><th>Stop</th><th>Target</th><th>Status</th></tr>
+          </thead>
+          <tbody id="positionsBody">
+            <tr><td colspan="7" class="empty">No managed positions</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Today's Trades</h2>
+        <span id="tradeCount" style="font-size:12px;color:var(--muted)">0 trades</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Time</th><th>Ticker</th><th>Side</th><th>Price</th><th>Qty</th><th>Strategy</th></tr>
+          </thead>
+          <tbody id="tradesBody">
+            <tr><td colspan="6" class="empty">No trades yet today</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Config -->
+  <div class="card">
+    <div class="section-head">
+      <h2>Autopilot Settings</h2>
+      <span style="font-size:12px;color:var(--muted)">Changes apply immediately</span>
+    </div>
+    <div class="config-grid">
+      <div class="field">
+        <label>Daily Budget ($)</label>
+        <input type="number" id="cfgBudget" placeholder="50" min="1" max="1000" />
+      </div>
+      <div class="field">
+        <label>Daily Loss Limit ($)</label>
+        <input type="number" id="cfgLossLimit" placeholder="20" min="1" max="500" />
+      </div>
+      <div class="field">
+        <label>Max Per Trade ($)</label>
+        <input type="number" id="cfgMaxTrade" placeholder="5" min="0.5" max="100" />
+      </div>
+      <div class="field">
+        <label>Contracts Per Trade</label>
+        <input type="number" id="cfgContracts" placeholder="5" min="1" max="100" />
+      </div>
+      <div class="field">
+        <label>Cooldown Between Scans (sec)</label>
+        <input type="number" id="cfgInterval" placeholder="15" min="5" max="3600" />
+      </div>
+      <div class="field">
+        <label>Min Mispricing Score</label>
+        <input type="number" id="cfgMinScore" placeholder="5" min="0" step="0.5" />
+      </div>
+      <div class="field">
+        <label>Stop Loss %</label>
+        <input type="number" id="cfgStopLoss" placeholder="40" min="5" max="95" />
+      </div>
+      <div class="field">
+        <label>Profit Target %</label>
+        <input type="number" id="cfgProfitTarget" placeholder="60" min="5" max="500" />
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveConfig()">Save Settings</button>
+      <button class="btn btn-danger" onclick="runNow()">▶ Scan &amp; Trade Now</button>
+    </div>
+    <div id="configMsg" style="margin-top:10px;font-size:12px;color:var(--muted)"></div>
+  </div>
+
+  <!-- Activity log -->
+  <div class="card">
+    <div class="section-head">
+      <h2>Activity Log</h2>
+      <button class="refresh-btn" onclick="loadAll()">Refresh</button>
+    </div>
+    <div class="log" id="activityLog">
+      <span style="color:var(--muted)">Waiting for activity…</span>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const BASE = window.location.pathname.replace(/\/$/, '');
+const api  = (path) => fetch(BASE + path).then(r => r.json());
+const post = (path, body) => fetch(BASE + path, {
+  method: 'POST',
+  headers: {'Content-Type':'application/json'},
+  body: body ? JSON.stringify(body) : undefined
+}).then(r => r.json());
+const put  = (path, body) => fetch(BASE + path, {
+  method: 'PUT',
+  headers: {'Content-Type':'application/json'},
+  body: JSON.stringify(body)
+}).then(r => r.json());
+
+let autopilotEnabled = false;
+let cryptoEnabled    = false;
+let scanIntervalSec  = 300;
+let nextScanAt       = null;
+const logLines       = [];
+
+// ── Logging ──────────────────────────────────────────────────────────────────
+function addLog(type, msg) {
+  const ts = new Date().toLocaleTimeString();
+  logLines.unshift({ ts, type, msg });
+  if (logLines.length > 60) logLines.pop();
+  renderLog();
+}
+
+function renderLog() {
+  const el = document.getElementById('activityLog');
+  if (!logLines.length) { el.innerHTML = '<span style="color:var(--muted)">Waiting for activity…</span>'; return; }
+  el.innerHTML = logLines.map(l => {
+    const cls = l.type === 'trade'  ? 'evt-trade'
+              : l.type === 'scan'   ? 'evt-scan'
+              : l.type === 'crypto' ? 'evt-crypto'
+              : 'evt-stop';
+    return `<div><span class="ts">${l.ts}</span><span class="${cls}">${l.msg}</span></div>`;
+  }).join('');
+}
+
+// ── Formatters ───────────────────────────────────────────────────────────────
+function fmt$(v) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return '—';
+  const s = '$' + Math.abs(n).toFixed(2);
+  return n < 0 ? '-' + s : s;
+}
+function fmtCents(c) { return c != null ? c + '¢' : '—'; }
+function fmtPct(v)   { return v != null ? (v >= 0 ? '+' : '') + parseFloat(v).toFixed(3) + '%' : '—'; }
+function fmtUsd(n)   {
+  n = parseFloat(n);
+  if (isNaN(n)) return '—';
+  return '$' + n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+
+// ── Candle chart ─────────────────────────────────────────────────────────────
+function renderCandleSVG(candles) {
+  if (!candles || candles.length < 2) return '<text x="50%" y="50%" text-anchor="middle" fill="#7b8099" font-size="11">No data</text>';
+  const n = candles.length;
+  const highs  = candles.map(c => parseFloat(c[2]));
+  const lows   = candles.map(c => parseFloat(c[3]));
+  const opens  = candles.map(c => parseFloat(c[1]));
+  const closes = candles.map(c => parseFloat(c[4]));
+  const allP   = [...highs, ...lows];
+  const minP   = Math.min(...allP);
+  const maxP   = Math.max(...allP);
+  const range  = maxP - minP || 1;
+  const W = 280, H = 64;
+  const gap  = 2;
+  const barW = Math.max(4, Math.floor((W - gap * n) / n));
+  const toY  = p => H - ((p - minP) / range * H);
+
+  return candles.map((c, i) => {
+    const o = opens[i], cl = closes[i], hi = highs[i], lo = lows[i];
+    const isGreen = cl >= o;
+    const color   = isGreen ? '#22c55e' : '#ef4444';
+    const bTop    = toY(Math.max(o, cl));
+    const bBot    = toY(Math.min(o, cl));
+    const bH      = Math.max(1.5, bBot - bTop);
+    const x       = i * (barW + gap);
+    const cx      = x + barW / 2;
+    return `<line x1="${cx.toFixed(1)}" y1="${toY(hi).toFixed(1)}" x2="${cx.toFixed(1)}" y2="${toY(lo).toFixed(1)}" stroke="${color}" stroke-width="1" opacity="0.5"/><rect x="${x}" y="${bTop.toFixed(1)}" width="${barW}" height="${bH.toFixed(1)}" fill="${color}" rx="1"/>`;
+  }).join('');
+}
+
+// ── Renderers ────────────────────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    const [ap, bal, pnl, pos] = await Promise.all([
+      api('/autopilot'),
+      api('/balance'),
+      api('/pnl'),
+      api('/positions/managed'),
+    ]);
+    renderAutopilot(ap);
+    renderBalance(bal);
+    renderPnl(pnl);
+    renderPositions(pos.positions || []);
+    renderTrades(pnl.today_trades || []);
+    document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    // Crypto signal embedded in autopilot status
+    if (ap.crypto_enabled && ap.crypto_signal) {
+      renderCryptoSignal(ap.crypto_signal);
+    }
+  } catch(e) {
+    document.getElementById('lastUpdated').textContent = 'Error loading data';
+  }
+}
+
+async function refreshCryptoSignal() {
+  if (!cryptoEnabled) return;
+  try {
+    const sig = await api('/crypto/signal');
+    renderCryptoSignal(sig);
+    addLog('crypto', `BTC $${sig.btc_price?.toLocaleString()} | ${sig.trend} (conf ${Math.round((sig.confidence||0)*100)}%) | 5m ${fmtPct(sig.btc_change_5m)}`);
+  } catch(e) {
+    // silently ignore
+  }
+}
+
+function renderCryptoSignal(sig) {
+  if (!sig) return;
+
+  // Panel visibility
+  document.getElementById('cryptoPanel').classList.toggle('visible', true);
+
+  // Trend badge
+  const badge = document.getElementById('cryptoTrendBadge');
+  const cls   = sig.trend === 'bullish' ? 'badge badge-green'
+              : sig.trend === 'bearish' ? 'badge badge-red'
+              : 'badge badge-cyan';
+  badge.className = cls;
+  badge.innerHTML = `<span class="badge-dot"></span>${sig.trend}`;
+
+  // Updated time
+  if (sig.fetched_at) {
+    const d = new Date(sig.fetched_at * 1000);
+    document.getElementById('cryptoUpdated').textContent = 'Updated ' + d.toLocaleTimeString();
+  }
+
+  // Prices
+  const btcEl = document.getElementById('btcPrice');
+  btcEl.textContent = sig.btc_price ? fmtUsd(sig.btc_price) : '—';
+  btcEl.className   = 'price-big neutral';
+
+  const ch5 = sig.btc_change_5m;
+  const ch1 = sig.btc_change_1h;
+  const set5 = document.getElementById('btcChange5m');
+  const set1 = document.getElementById('btcChange1h');
+  set5.textContent = `5m: ${fmtPct(ch5)}`;
+  set5.className   = `price-change ${ch5 > 0.05 ? 'up' : ch5 < -0.05 ? 'down' : 'flat'}`;
+  set1.textContent = `1h: ${fmtPct(ch1)}`;
+  set1.className   = `price-change ${ch1 > 0.15 ? 'up' : ch1 < -0.15 ? 'down' : 'flat'}`;
+  document.getElementById('ethPrice').textContent = sig.eth_price ? fmtUsd(sig.eth_price) : '—';
+
+  // Candle chart
+  if (sig.candles_5m && sig.candles_5m.length) {
+    const svg = document.getElementById('candleChart');
+    svg.innerHTML = renderCandleSVG(sig.candles_5m);
+  }
+
+  // Confidence bar
+  const pct = Math.round((sig.confidence || 0) * 100);
+  document.getElementById('confPct').textContent = pct + '%';
+  const cb = document.getElementById('confBar');
+  cb.style.width = pct + '%';
+  cb.className   = `signal-fill ${sig.trend === 'bullish' ? 'bull' : sig.trend === 'bearish' ? 'bear' : 'neut'}`;
+
+  // News sentiment
+  const sent     = sig.news_sentiment || 0;
+  const sentDisp = (sent >= 0 ? '+' : '') + sent.toFixed(2);
+  const sentEl   = document.getElementById('newsSentScore');
+  sentEl.textContent = sentDisp;
+  sentEl.style.color = sent > 0.05 ? 'var(--green)' : sent < -0.05 ? 'var(--red)' : 'var(--muted)';
+
+  const sentBar = document.getElementById('sentBar');
+  const sentPct = Math.round(((sent + 1) / 2) * 100); // -1…1 → 0…100
+  sentBar.style.width = sentPct + '%';
+  sentBar.className   = `signal-fill ${sent > 0.05 ? 'bull' : sent < -0.05 ? 'bear' : 'neut'}`;
+
+  // News headlines
+  const headlines = sig.news_headlines || [];
+  const nl = document.getElementById('newsList');
+  if (!headlines.length) {
+    nl.innerHTML = '<div class="news-item" style="color:var(--muted)">No headlines available</div>';
+  } else {
+    nl.innerHTML = headlines.slice(0, 5).map(h => {
+      const words = h.toLowerCase().split(' ');
+      const bull  = ['rally','surge','breakout','bullish','rise','gain','ath','record','buy','approved'];
+      const bear  = ['crash','dump','bearish','drop','fall','decline','sell','ban','hack','warning'];
+      const isBull = bull.some(w => words.includes(w));
+      const isBear = bear.some(w => words.includes(w));
+      const bClass = isBull ? 'badge-green' : isBear ? 'badge-red' : 'badge-cyan';
+      const bText  = isBull ? '↑' : isBear ? '↓' : '·';
+      return `<div class="news-item"><span class="news-badge badge ${bClass}">${bText}</span>${h}</div>`;
+    }).join('');
+  }
+}
+
+function renderAutopilot(ap) {
+  autopilotEnabled = ap.enabled;
+  cryptoEnabled    = ap.crypto_enabled || false;
+  scanIntervalSec  = ap.scan_interval_sec;
+
+  // Autopilot toggle
+  const toggle = document.getElementById('toggleEl');
+  const label  = document.getElementById('toggleLabel');
+  const badge  = document.getElementById('statusBadge');
+  const dot    = document.getElementById('liveDot');
+
+  toggle.className = 'toggle' + (ap.enabled ? ' on' : '');
+  label.className  = 'toggle-label ' + (ap.enabled ? 'on' : 'off');
+  label.textContent = ap.enabled ? 'ON' : 'OFF';
+
+  if (ap.enabled) {
+    badge.innerHTML = '<span class="badge badge-green"><span class="badge-dot"></span>Running</span>';
+    dot.style.background = 'var(--green)';
+    dot.style.boxShadow  = '0 0 8px var(--green)';
+    if (!nextScanAt) nextScanAt = Date.now() + scanIntervalSec * 1000;
+  } else {
+    badge.innerHTML = '<span class="badge badge-red"><span class="badge-dot"></span>Offline</span>';
+    dot.style.background = 'var(--red)';
+    dot.style.boxShadow  = '0 0 8px var(--red)';
+    nextScanAt = null;
+    document.getElementById('nextScan').textContent = 'Autopilot is off';
+  }
+
+  // Crypto toggle
+  const cEl  = document.getElementById('cryptoEl');
+  const cLbl = document.getElementById('cryptoLabel');
+  cEl.className  = 'toggle' + (cryptoEnabled ? ' crypto-on' : '');
+  cLbl.className = 'toggle-label ' + (cryptoEnabled ? 'crypto-on' : 'off');
+  document.getElementById('cryptoPanel').classList.toggle('visible', cryptoEnabled);
+
+  // Budget bar
+  const pct = Math.min(100, (ap.today_deployed_dollars / ap.daily_budget_usd) * 100);
+  document.getElementById('budgetBar').style.width = pct + '%';
+  document.getElementById('budgetLabel').textContent = 'of ' + fmt$(ap.daily_budget_usd);
+  document.getElementById('deployed').textContent = fmt$(ap.today_deployed_dollars);
+
+  // Populate config fields once
+  if (!document.getElementById('cfgBudget').value) {
+    document.getElementById('cfgBudget').value      = ap.daily_budget_usd;
+    document.getElementById('cfgLossLimit').value   = ap.daily_loss_limit_usd;
+    document.getElementById('cfgMaxTrade').value    = ap.max_trade_usd;
+    document.getElementById('cfgContracts').value   = ap.contracts_per_trade;
+    document.getElementById('cfgInterval').value    = ap.scan_interval_sec;
+    document.getElementById('cfgMinScore').value    = ap.min_score;
+    document.getElementById('cfgStopLoss').value    = Math.round(ap.stop_loss_pct * 100);
+    document.getElementById('cfgProfitTarget').value = Math.round(ap.profit_target_pct * 100);
+  }
+}
+
+function renderBalance(bal) {
+  const el = document.getElementById('balance');
+  const v  = parseFloat(bal.balance_dollars || 0);
+  el.textContent = fmt$(v);
+  el.className   = 'card-value neutral';
+}
+
+function renderPnl(pnl) {
+  const realized   = parseFloat(pnl.today_realized_pnl_dollars || 0);
+  const unrealized = parseFloat(pnl.unrealized_pnl_dollars || 0);
+  const total      = parseFloat(pnl.total_pnl_dollars ?? (realized + unrealized));
+  const el = document.getElementById('todayPnl');
+  el.textContent = fmt$(total);
+  el.className   = 'card-value ' + (total > 0 ? 'positive' : total < 0 ? 'negative' : 'neutral');
+  const parts = [];
+  if (Math.abs(realized) >= 0.001)   parts.push(`realized ${fmt$(realized)}`);
+  if (Math.abs(unrealized) >= 0.001) parts.push(`open ${unrealized >= 0 ? '+' : ''}${fmt$(unrealized)}`);
+  const n = pnl.today_trade_count || 0;
+  const tradeStr = `${n} trade${n !== 1 ? 's' : ''}`;
+  document.getElementById('todayTrades').textContent =
+    parts.length ? parts.join(' · ') + ` · ${tradeStr}` : `no closed trades · ${tradeStr}`;
+}
+
+function renderPositions(positions) {
+  const tbody = document.getElementById('positionsBody');
+  if (!positions.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No managed positions</td></tr>';
+    return;
+  }
+  tbody.innerHTML = positions.map(p => `
+    <tr>
+      <td class="ticker">${p.ticker.length > 22 ? p.ticker.substring(0, 22) + '…' : p.ticker}</td>
+      <td>${p.side === 'yes' ? '<span class="positive">YES</span>' : '<span class="negative">NO</span>'}</td>
+      <td>${p.contracts}</td>
+      <td>${fmtCents(p.entry_price)}</td>
+      <td class="negative">${fmtCents(p.stop_loss)}</td>
+      <td class="positive">${fmtCents(p.profit_target)}</td>
+      <td><span class="badge ${p.status === 'open' ? 'badge-green' : p.status === 'closed' ? 'badge-yellow' : 'badge-red'}">${p.status}</span></td>
+    </tr>
+  `).join('');
+}
+
+function renderTrades(trades) {
+  const tbody = document.getElementById('tradesBody');
+  document.getElementById('tradeCount').textContent =
+    trades.length + ' trade' + (trades.length !== 1 ? 's' : '');
+  if (!trades.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">No trades yet today</td></tr>';
+    return;
+  }
+  tbody.innerHTML = trades.slice(0, 20).map(t => {
+    const time  = new Date(t.filled_at + 'Z').toLocaleTimeString();
+    const short = t.ticker.length > 18 ? t.ticker.substring(0, 18) + '…' : t.ticker;
+    return `
+      <tr>
+        <td style="color:var(--muted)">${time}</td>
+        <td class="ticker">${short}</td>
+        <td>${t.side === 'yes' ? '<span class="positive">YES</span>' : '<span class="negative">NO</span>'}</td>
+        <td>${fmtCents(t.price_cents)}</td>
+        <td>${t.contracts}</td>
+        <td><span class="badge badge-yellow">${t.note || t.action}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── Toggle handlers ───────────────────────────────────────────────────────────
+async function toggleAutopilot() {
+  const enabling = !autopilotEnabled;
+  try {
+    if (enabling) {
+      await post('/autopilot/start');
+      addLog('scan', 'Autopilot enabled');
+    } else {
+      await post('/autopilot/stop');
+      addLog('stop', 'Autopilot stopped');
+    }
+    nextScanAt = enabling ? Date.now() + scanIntervalSec * 1000 : null;
+    await loadAll();
+  } catch(e) {
+    addLog('stop', 'Toggle failed: ' + e.message);
+  }
+}
+
+async function toggleCrypto() {
+  const enabling = !cryptoEnabled;
+  try {
+    await put('/autopilot/config', { crypto_enabled: enabling });
+    cryptoEnabled = enabling;
+    addLog('crypto', enabling ? '₿ Crypto mode ON — BTC signal + news enabled' : '₿ Crypto mode OFF');
+    await loadAll();
+    if (enabling) {
+      addLog('crypto', 'Fetching live BTC signal…');
+      await refreshCryptoSignal();
+    } else {
+      document.getElementById('cryptoPanel').classList.remove('visible');
+    }
+  } catch(e) {
+    addLog('stop', 'Crypto toggle failed: ' + e.message);
+  }
+}
+
+async function saveConfig() {
+  const msg = document.getElementById('configMsg');
+  msg.textContent = 'Saving…';
+  const body = {};
+  const budget = document.getElementById('cfgBudget').value;
+  const loss   = document.getElementById('cfgLossLimit').value;
+  const maxT   = document.getElementById('cfgMaxTrade').value;
+  const contr  = document.getElementById('cfgContracts').value;
+  const intv   = document.getElementById('cfgInterval').value;
+  const score  = document.getElementById('cfgMinScore').value;
+  const sl     = document.getElementById('cfgStopLoss').value;
+  const pt     = document.getElementById('cfgProfitTarget').value;
+  if (budget) body.daily_budget_usd      = parseFloat(budget);
+  if (loss)   body.daily_loss_limit_usd  = parseFloat(loss);
+  if (maxT)   body.max_trade_usd         = parseFloat(maxT);
+  if (contr)  body.contracts_per_trade   = parseInt(contr);
+  if (intv)   body.scan_interval_sec     = parseInt(intv);
+  if (score)  body.min_score             = parseFloat(score);
+  if (sl)     body.stop_loss_pct         = parseFloat(sl) / 100;
+  if (pt)     body.profit_target_pct     = parseFloat(pt) / 100;
+  try {
+    await put('/autopilot/config', body);
+    msg.textContent = '✓ Settings saved';
+    msg.style.color = 'var(--green)';
+    addLog('scan', 'Config updated');
+    await loadAll();
+    scanIntervalSec = parseInt(intv) || scanIntervalSec;
+  } catch(e) {
+    msg.textContent = 'Save failed';
+    msg.style.color = 'var(--red)';
+  }
+  setTimeout(() => msg.textContent = '', 3000);
+}
+
+async function runNow() {
+  addLog('scan', 'Manual scan triggered…');
+  try {
+    const result = await post('/autopilot/run');
+    const n = result.trades_placed || 0;
+    addLog(n > 0 ? 'trade' : 'scan',
+      `Scan complete — ${result.scanned} markets, ${result.signals} signals, ${n} trade${n !== 1 ? 's' : ''} placed`);
+    if (n > 0) result.trades?.forEach(t =>
+      addLog('trade', `  → ${t.strategy} on ${t.ticker?.substring(0, 20)} ($${t.total_cost_dollars?.toFixed(2)})`)
+    );
+    if (result.crypto_signal) renderCryptoSignal(result.crypto_signal);
+    nextScanAt = Date.now() + scanIntervalSec * 1000;
+    await loadAll();
+  } catch(e) {
+    addLog('stop', 'Scan failed: ' + e.message);
+  }
+}
+
+// Countdown to next scan
+function tickCountdown() {
+  if (!autopilotEnabled || !nextScanAt) return;
+  const secs = Math.max(0, Math.round((nextScanAt - Date.now()) / 1000));
+  const m = Math.floor(secs / 60), s = secs % 60;
+  document.getElementById('nextScan').textContent =
+    `Next scan in ${m}:${String(s).padStart(2,'0')}`;
+  if (secs === 0) { nextScanAt = Date.now() + scanIntervalSec * 1000; addLog('scan', 'Scanning…'); }
+}
+
+// Auto-refresh
+loadAll();
+setInterval(loadAll, 10000);
+setInterval(tickCountdown, 1000);
+// Refresh crypto signal every 30s when enabled
+setInterval(() => { if (cryptoEnabled) refreshCryptoSignal(); }, 30000);
+addLog('scan', 'Dashboard loaded');
+</script>
+</body>
+</html>
